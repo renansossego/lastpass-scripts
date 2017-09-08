@@ -43,14 +43,13 @@ function do_useradd() {
 
 # PARAMETERS
 
-LOGIN=lastpass@sossego.com.br
 BASE="Shared-$1-$2"
 CLIENT_EMAIL=$3
 
 
 # LETS DO THE JOB!
 
-do_login $LOGIN "$SENHALASTPASS"
+do_login $LOGINLASTPASS "$SENHALASTPASS"
 
 do_create "$BASE"
 

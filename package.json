@@ -1,0 +1,34 @@
+{
+  "name": "lastpass-scripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "credentials-saving.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "babel src --out-dir dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/renansossego/lastpass-scripts.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/renansossego/lastpass-scripts/issues"
+  },
+  "homepage": "https://github.com/renansossego/lastpass-scripts#readme",
+  "dependencies": {
+    "csvtojson": "^1.1.7",
+    "dotenv": "^4.0.0",
+    "fs": "0.0.1-security",
+    "mongoose": "^4.11.10",
+    "mongoose-uuid2": "^2.0.1",
+    "node-uuid": "^1.4.8"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-preset-node6-es6": "^11.2.5"
+  }
+}
