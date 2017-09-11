@@ -47,50 +47,76 @@ let _saveCredentials = (() => {
 
 let _updateBrokerCredentials = (() => {
     var _ref2 = _asyncToGenerator(function* (brokerCnpj, credentials) {
-        let broker = yield Brokers.findOne({ cnpj: brokerCnpj });
-        if (!broker) {
-            return;
-        }
-
         let credentialsLength = credentials.length;
         let credentialIndex = 0;
+        let accesses = [];
 
-        let _recursiveSaving = (() => {
+        let _recursiveAccessCreation = (() => {
             var _ref3 = _asyncToGenerator(function* () {
                 if (credentialIndex >= credentialsLength) {
                     return;
                 }
 
+                let credential = credentials[credentialIndex];
+
                 if (credential.username && credential.password) {
                     let credential = credentials[credentialIndex];
-                    let credentialName = credential.name.replace(/ /g, "").toLowerCase();
-                    let access = yield broker.acessos.find(function (x) {
-                        return x.seguradoraId == credentialName;
-                    });
+                    let insurerId = credential.name.replace(/ /g, "").toLowerCase();
+                    let access = {
+                        seguradoraId: insurerId,
+                        usuario: credential.username,
+                        password: credential.password
+                    };
 
-                    if (access && (credential.username != access.usuario || credential.password != access.password)) {
-                        access.usuario = credential.username != access.usuario ? credential.username : access.usuario;
-                        access.password = credential.password != access.password ? credential.password : access.password;
-
-                        broker.markModified('acessos');
-                    }
+                    yield accesses.push(access);
                 }
 
                 credentialIndex++;
-
-                _recursiveSaving();
-
-                if (broker.isModified('acessos')) {
-                    yield broker.save();
-                }
+                _recursiveAccessCreation();
             });
 
-            return function _recursiveSaving() {
+            return function _recursiveAccessCreation() {
                 return _ref3.apply(this, arguments);
             };
         })();
 
-        _recursiveSaving();
+        _recursiveAccessCreation();
+        if (!accesses.length) {
+            return;
+        }
+
+        let req = http.request({
+            "method": "PUT",
+            "hostname": process.env.API_SECURITY_HOSTNAME,
+            "port": process.env.API_SECURITY_PORT,
+            "path": `/acessos/${brokerCnpj}`,
+            "headers": {
+                "content-type": "application/json",
+                "authorization": process.env.API_SECURITY_AUTHTOKEN
+            }
+        }, function (res) {
+            let chunks = [];
+
+            res.on("data", function (chunk) {
+                chunks.push(chunk);
+            });
+
+            res.on("end", function () {
+                let body = Buffer.concat(chunks);
+                body = body.toString();
+
+                if (!body) {
+                    return;
+                }
+
+                let result = JSON.parse(body);
+
+                console.log(result.message);
+            });
+        });
+
+        yield req.write(JSON.stringify(accesses));
+        yield req.end();
     });
 
     return function _updateBrokerCredentials(_x2, _x3) {
@@ -101,22 +127,16 @@ let _updateBrokerCredentials = (() => {
 function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
 
 require('dotenv').load();
-const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const csv = require("csvtojson");
-const Brokers = require('./schemas/brokers');
+const http = require('http');
 
-mongoose.connect(process.env.DB_SECURITY_CONNECTION, function (err) {
-    if (err) {
-        console.error(err);process.exit(1);
-    }
-
-    _startProcess();
-});
+_startProcess();
 
 function _startProcess() {
     let filePath = path.join(process.cwd(), '/credentials.csv');
+    console.log(filePath);
 
     if (!fs.existsSync(filePath)) {
         console.log("File not found");return;

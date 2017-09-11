@@ -21,10 +21,7 @@
   "dependencies": {
     "csvtojson": "^1.1.7",
     "dotenv": "^4.0.0",
-    "fs": "0.0.1-security",
-    "mongoose": "^4.11.10",
-    "mongoose-uuid2": "^2.0.1",
-    "node-uuid": "^1.4.8"
+    "fs": "0.0.1-security"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",

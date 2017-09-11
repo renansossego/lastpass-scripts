@@ -1,19 +1,14 @@
 require('dotenv').load();
-const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const csv = require("csvtojson");
-const Brokers = require('./schemas/brokers');
+const http = require('http');
 
-mongoose.connect(process.env.DB_SECURITY_CONNECTION, function (err) {
-    if (err) { console.error(err); process.exit(1); }
-
-    _startProcess();
-});
-
+_startProcess();
 
 function _startProcess() {
     let filePath = path.join(process.cwd(), '/credentials.csv');
+    console.log(filePath);
 
     if (!fs.existsSync(filePath)) { console.log("File not found"); return; }
 
@@ -64,36 +59,62 @@ async function _saveCredentials(credentials) {
 }
 
 async function _updateBrokerCredentials(brokerCnpj, credentials) {
-    let broker = await Brokers.findOne({ cnpj: brokerCnpj });
-    if (!broker) { return; }
-
     let credentialsLength = credentials.length;
     let credentialIndex = 0;
+    let accesses = [];
 
-    let _recursiveSaving = async function () {
+    let _recursiveAccessCreation = async function () {
         if (credentialIndex >= credentialsLength) { return; }
+
+        let credential = credentials[credentialIndex];
 
         if (credential.username && credential.password) {
             let credential = credentials[credentialIndex];
-            let credentialName = credential.name.replace(/ /g, "").toLowerCase();
-            let access = await broker.acessos.find(function (x) { return x.seguradoraId == credentialName });
+            let insurerId = credential.name.replace(/ /g, "").toLowerCase();
+            let access = {
+                seguradoraId: insurerId,
+                usuario: credential.username,
+                password: credential.password
+            };
 
-            if (access && (credential.username != access.usuario || credential.password != access.password)) {
-                access.usuario = credential.username != access.usuario ? credential.username : access.usuario;
-                access.password = credential.password != access.password ? credential.password : access.password;
-
-                broker.markModified('acessos');
-            }
+            await accesses.push(access);
         }
 
         credentialIndex++;
-
-        _recursiveSaving();
-
-        if (broker.isModified('acessos')) {
-            await broker.save();
-        }
+        _recursiveAccessCreation();
     }
 
-    _recursiveSaving();
+    _recursiveAccessCreation();
+    if (!accesses.length) { return; }
+
+    let req = http.request({
+        "method": "PUT",
+        "hostname": process.env.API_SECURITY_HOSTNAME,
+        "port": process.env.API_SECURITY_PORT,
+        "path": `/acessos/${brokerCnpj}`,
+        "headers": {
+            "content-type": "application/json",
+            "authorization": process.env.API_SECURITY_AUTHTOKEN,
+        }
+    }, function (res) {
+        let chunks = [];
+
+        res.on("data", function (chunk) {
+            chunks.push(chunk);
+        });
+
+        res.on("end", function () {
+            let body = Buffer.concat(chunks);
+            body = body.toString();
+
+            if (!body) { return; }
+
+            let result = JSON.parse(body);
+
+            console.log(result.message);
+        });
+    });
+
+    await req.write(JSON.stringify(accesses));
+    await req.end();
 }

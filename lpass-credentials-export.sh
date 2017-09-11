@@ -12,5 +12,17 @@ function do_logout() {
   lpass logout --force
 }
 
-# PARAMETERS
+LOGINLASTPASS=lastpass@sossego.com.br
+SENHALASTPASS=shdgf8wrywhbugf67trg83v276rge6rf247r
 
+# LETS DO THE JOB!
+
+do_login $LOGINLASTPASS "$SENHALASTPASS"
+
+lpass export --fields=url,username,password,name,grouping >> credentials.csv
+
+node credentials-saving-entry.js
+
+do_logout
+
+rm credentials.csv
